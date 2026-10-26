@@ -1,0 +1,141 @@
+# Builds Boxedwine (Windows-in-the-browser) for the web, adds the HubD
+# launcher and touch controls, and publishes the result to GitHub Pages.
+#
+# No game files are involved: you pick your own Diablo II zip on your phone
+# and it never leaves the device.
+name: Build and deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      wine_url:
+        description: Wine filesystem zip to bundle (Boxedwine TinyCore build)
+        required: false
+        default: ""
+      wine_sha256:
+        description: SHA-256 of that zip (leave empty to skip the check)
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  # Pinned so a change upstream can't silently break the site.
+  BOXEDWINE_REPO: https://github.com/danoon2/Boxedwine.git
+  BOXEDWINE_COMMIT: c97af708a5393316a1eda291cd3013472babc5ff
+  EMSDK_VERSION: 5.0.7
+  DEFAULT_WINE_URL: https://boxedwine.org/v2/11/TinyCore15Wine11.0.zip
+  DEFAULT_WINE_SHA256: a3367c4e977dbbe0295ce3b4b102bf7b0baa1278ea121cefe6065d561b960452
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      matrix:
+        # jit: single threaded, works everywhere.
+        # multiThreadedJit: uses Web Workers; needs the service worker's
+        # cross-origin isolation headers.
+        target: [jit, multiThreadedJit]
+    steps:
+      - name: Check out Boxedwine
+        run: |
+          git init boxedwine
+          cd boxedwine
+          git remote add origin "$BOXEDWINE_REPO"
+          git fetch --depth 1 origin "$BOXEDWINE_COMMIT"
+          git checkout FETCH_HEAD
+
+      - name: Cache Emscripten SDK
+        uses: actions/cache@v4
+        with:
+          path: emsdk
+          key: emsdk-${{ env.EMSDK_VERSION }}
+
+      - name: Install Emscripten SDK
+        run: |
+          if [ ! -f emsdk/emsdk_env.sh ]; then
+            git clone --depth 1 https://github.com/emscripten-core/emsdk.git
+          fi
+          cd emsdk
+          ./emsdk install "$EMSDK_VERSION"
+          ./emsdk activate "$EMSDK_VERSION"
+
+      - name: Build ${{ matrix.target }}
+        run: |
+          source emsdk/emsdk_env.sh
+          cd boxedwine/project/emscripten
+          make ${{ matrix.target }} -j"$(nproc)"
+
+      # The build folder also holds object files; keep only what the browser loads.
+      - name: Collect output
+        env:
+          BUILD_DIR: boxedwine/project/emscripten/Build/${{ matrix.target == 'jit' && 'Jit' || 'MultiThreadedJit' }}
+        run: |
+          mkdir out
+          find "$BUILD_DIR" -maxdepth 1 -type f \( -name '*.html' -o -name '*.js' -o -name '*.wasm' -o -name '*.css' -o -name '*.data' \) -exec cp {} out/ \;
+          ls -la out
+          test -f out/boxedwine.html
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: boxedwine-${{ matrix.target }}
+          path: out
+          if-no-files-found: error
+
+  site:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: boxedwine-jit
+          path: dist/st
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: boxedwine-multiThreadedJit
+          path: dist/mt
+
+      - name: Download Wine filesystem
+        env:
+          WINE_URL: ${{ inputs.wine_url }}
+          WINE_SHA256: ${{ inputs.wine_sha256 }}
+        run: |
+          url="${WINE_URL:-$DEFAULT_WINE_URL}"
+          if [ -n "$WINE_URL" ]; then sha="$WINE_SHA256"; else sha="$DEFAULT_WINE_SHA256"; fi
+          curl -fL --retry 4 -o wine.zip "$url"
+          if [ -n "$sha" ]; then
+            echo "$sha  wine.zip" | sha256sum -c -
+          fi
+
+      - name: Assemble site
+        run: scripts/assemble-site.sh dist/st dist/mt wine.zip site
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: site
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
