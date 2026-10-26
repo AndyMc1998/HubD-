@@ -85,13 +85,29 @@ async function zipFileNames(file) {
     return names;
 }
 
+// Explains the usual wrong zips: an installer, a disc image, or Resurrected.
+function missingExeMessage(names) {
+    const files = names.filter((name) => !name.endsWith("/") && !name.startsWith("__MACOSX/"));
+    const has = (pattern) => files.some((name) => pattern.test(name));
+    let reason = "Zip the folder Diablo II is installed in (it has Game.exe and .mpq files).";
+    if (has(/(^|\/)d2r\.exe$/i)) {
+        reason = "This is Diablo II: Resurrected, which can't run here. You need the original Diablo II (2000).";
+    } else if (has(/\.(iso|bin|cue|mdf|nrg)$/i)) {
+        reason = "This is a disc image. Install the game on a Windows PC, then zip the folder it installed into.";
+    } else if (has(/(^|\/)(setup|install|installer)[^/]*\.exe$/i) || has(/installer tome\.mpq$/i)) {
+        reason = "This is the installer. Run it on a Windows PC, then zip the folder it installed into (usually C:\\Program Files (x86)\\Diablo II).";
+    }
+    const sample = files.slice(0, 8).join(", ");
+    return "No Game.exe in this zip. " + reason + (sample ? " Found: " + sample + (files.length > 8 ? "…" : "") : " The zip is empty.");
+}
+
 async function findGameExe(file) {
     const names = await zipFileNames(file);
     const exes = names
         .filter((name) => /(^|\/)game\.exe$/i.test(name) && !name.startsWith("__MACOSX/"))
         .sort((a, b) => a.split("/").length - b.split("/").length);
     if (exes.length === 0) {
-        throw new Error("No Game.exe in this zip. Zip the folder Diablo II is installed in.");
+        throw new Error(missingExeMessage(names));
     }
     const mpqs = names.filter((name) => /\.mpq$/i.test(name)).length;
     return { exe: exes[0], mpqs: mpqs };
