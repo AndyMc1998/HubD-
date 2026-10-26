@@ -147,3 +147,13 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Game files: never commit Blizzard's data (use your own copy on your device)
+*.mpq
+*.MPQ
+*.zip
+*.iso
+Game.exe
+Diablo II.exe
+/site/
+/dist/

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HubD">
+<meta name="theme-color" content="#120d0a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>HubD</title>
+<link rel="stylesheet" href="launcher.css">
+</head>
+<body>
+<main>
+    <header>
+        <h1>HubD</h1>
+        <p class="tagline">Diablo II in your browser, using your own game files.</p>
+    </header>
+
+    <section id="support" class="card" hidden></section>
+
+    <section class="card">
+        <h2>1. Your game</h2>
+        <div id="game-none">
+            <p>Choose a <b>.zip</b> of your installed Diablo II folder (the one containing <code>Game.exe</code>). It is saved on this device only.</p>
+        </div>
+        <div id="game-saved" hidden>
+            <p class="saved"><span id="game-name"></span><span id="game-size" class="muted"></span></p>
+            <p class="muted small">Runs <code id="game-exe"></code></p>
+        </div>
+        <label class="button secondary" for="file">
+            <span id="file-label">Choose zip…</span>
+            <input type="file" id="file" accept=".zip,application/zip">
+        </label>
+        <button id="forget" class="link" hidden>Remove from this device</button>
+        <p id="file-status" class="status" role="status"></p>
+    </section>
+
+    <section class="card">
+        <h2>2. Settings</h2>
+        <label class="row"><span>Engine</span>
+            <select id="engine">
+                <option value="st">Single-threaded (most compatible)</option>
+                <option value="mt">Multi-threaded (may be faster)</option>
+            </select>
+        </label>
+        <label class="row"><span>Screen</span>
+            <select id="resolution">
+                <option value="800x600">800 × 600</option>
+                <option value="640x480">640 × 480 (faster)</option>
+            </select>
+        </label>
+        <label class="row"><span>Windowed mode (<code>-w</code>)</span><input type="checkbox" id="windowed" checked></label>
+        <label class="row"><span>GDI renderer</span><input type="checkbox" id="gdi" checked></label>
+        <label class="row"><span>Sound</span><input type="checkbox" id="sound" checked></label>
+        <label class="row"><span>Extra arguments</span><input type="text" id="args" placeholder="e.g. -ns -nofixaspect" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+    </section>
+
+    <button id="play" class="button primary" disabled>Play</button>
+
+    <details class="card">
+        <summary>How to make the zip</summary>
+        <ol>
+            <li>On a Windows PC, install Diablo II (version 1.14d from your Blizzard account works without a CD).</li>
+            <li>Open the install folder, select its contents, and zip them (right-click → <i>Compress to ZIP file</i>).</li>
+            <li>To save memory, leave out the cutscene files <code>d2video.mpq</code> / <code>d2xvideo.mpq</code>. If the game won't start without them, put them back.</li>
+            <li>Get the zip onto your iPhone (iCloud Drive, AirDrop to Files) and pick it above.</li>
+        </ol>
+    </details>
+
+    <details class="card">
+        <summary>Controls on iPhone</summary>
+        <ul>
+            <li><b>Tap / hold</b>: left click (move, attack, pick up).</li>
+            <li><b>R</b> button: next touch is a right click. Double-tap R to lock it on.</li>
+            <li><b>⌨</b> button: shows game keys (Esc, Alt, Tab, I, C, S, 1–4, Shift…).</li>
+            <li>Turn your phone sideways. For full screen, use Share → <i>Add to Home Screen</i> and open HubD from there.</li>
+        </ul>
+    </details>
+
+    <p class="muted small footer">Runs the original Windows game with <a href="https://github.com/danoon2/Boxedwine">Boxedwine</a>. Diablo II is © Blizzard Entertainment; you need your own copy.</p>
+</main>
+<script src="launcher.js"></script>
+</body>
+</html>

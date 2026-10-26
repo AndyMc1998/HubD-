@@ -1,0 +1,117 @@
+/* HubD layer for Boxedwine's page: game fills the screen, controls float on top. */
+html, body {
+    margin: 0;
+    padding: 0;
+    background: #000;
+    color: #ddd;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body:not(.hubd-show-ui) #controls,
+body:not(.hubd-show-ui) #console,
+body:not(.hubd-show-ui) #app > hr {
+    display: none !important;
+}
+
+body.hubd-show-ui #console {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+}
+body.hubd-show-ui #output {
+    display: block !important;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 10px;
+    background: rgba(0, 0, 0, 0.85);
+    color: #9f9;
+}
+body.hubd-show-ui #controls {
+    position: fixed;
+    top: env(safe-area-inset-top);
+    left: env(safe-area-inset-left);
+    z-index: 20;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 6px;
+    font-size: 14px;
+}
+
+#dropzone, .emscripten_border {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Diablo II runs at 4:3, so keep that shape and fit it to the screen. */
+canvas.emscripten {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(100vw, calc(100vh * 4 / 3)) !important;
+    height: min(100vh, calc(100vw * 3 / 4)) !important;
+    image-rendering: pixelated;
+    touch-action: none;
+    border: 0 !important;
+}
+
+#hubd-bar {
+    position: fixed;
+    right: calc(env(safe-area-inset-right) + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 30;
+}
+
+#hubd-keys {
+    position: fixed;
+    left: calc(env(safe-area-inset-left) + 8px);
+    right: calc(env(safe-area-inset-right) + 64px);
+    bottom: calc(env(safe-area-inset-bottom) + 8px);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    z-index: 30;
+}
+#hubd-keys[hidden] {
+    display: none;
+}
+
+.hubd-btn {
+    min-width: 44px;
+    height: 44px;
+    padding: 0 10px;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 210, 140, 0.45);
+    background: rgba(30, 20, 12, 0.55);
+    color: #f0d9b0;
+    font: 600 15px -apple-system, system-ui, sans-serif;
+    touch-action: manipulation;
+}
+.hubd-btn.on {
+    background: rgba(170, 60, 20, 0.8);
+    color: #fff;
+}
+.hubd-btn.locked {
+    box-shadow: 0 0 0 3px rgba(255, 120, 60, 0.9);
+}
+#hubd-keys .hubd-btn {
+    height: 38px;
+    min-width: 38px;
+    font-size: 13px;
+}
