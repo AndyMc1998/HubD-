@@ -33,8 +33,10 @@ env:
   BOXEDWINE_REPO: https://github.com/danoon2/Boxedwine.git
   BOXEDWINE_COMMIT: c97af708a5393316a1eda291cd3013472babc5ff
   EMSDK_VERSION: 5.0.7
-  DEFAULT_WINE_URL: https://boxedwine.org/v2/11/TinyCore15Wine11.0.zip
-  DEFAULT_WINE_SHA256: a3367c4e977dbbe0295ce3b4b102bf7b0baa1278ea121cefe6065d561b960452
+  # Boxedwine moves these between folders, so the build also asks its file list.
+  WINE_FILE: TinyCore15Wine11.0.zip
+  WINE_FOLDERS: "23 11"
+  WINE_FILE_LIST: http://www.boxedwine.org/v2/26R2/filesV2.xml
 
 jobs:
   build:
@@ -114,11 +116,38 @@ jobs:
           WINE_URL: ${{ inputs.wine_url }}
           WINE_SHA256: ${{ inputs.wine_sha256 }}
         run: |
-          url="${WINE_URL:-$DEFAULT_WINE_URL}"
-          if [ -n "$WINE_URL" ]; then sha="$WINE_SHA256"; else sha="$DEFAULT_WINE_SHA256"; fi
-          curl -fL --retry 4 -o wine.zip "$url"
-          if [ -n "$sha" ]; then
-            echo "$sha  wine.zip" | sha256sum -c -
+          if [ -n "$WINE_URL" ]; then
+            candidates="$WINE_URL"
+          else
+            candidates=""
+            for folder in $WINE_FOLDERS; do
+              candidates="$candidates https://boxedwine.org/v2/$folder/$WINE_FILE"
+            done
+            # Whatever Boxedwine's own file list currently points at, newest Wine first.
+            if curl -fsSL --retry 2 -o files.xml "$WINE_FILE_LIST"; then
+              listed=$(grep -oE 'https?://[^"<> ]*TinyCore[^"<> ]*Wine[0-9.]+\.zip' files.xml | sort -u -t/ -k6 -V -r || true)
+              echo "Wine filesystems in the file list:"; echo "$listed"
+              candidates="$candidates $(echo "$listed" | grep -F "/$WINE_FILE" || true) $listed"
+            else
+              echo "Could not read $WINE_FILE_LIST"
+            fi
+          fi
+          for url in $candidates; do
+            echo "Trying $url"
+            if curl -fL --retry 3 -o wine.zip "$url"; then
+              echo "Downloaded $url"
+              break
+            fi
+            rm -f wine.zip
+          done
+          if [ ! -s wine.zip ]; then
+            echo "::error::No Wine filesystem could be downloaded. Run the workflow by hand with a wine_url."
+            exit 1
+          fi
+          unzip -tq wine.zip
+          sha256sum wine.zip
+          if [ -n "$WINE_SHA256" ]; then
+            echo "$WINE_SHA256  wine.zip" | sha256sum -c -
           fi
 
       - name: Assemble site
